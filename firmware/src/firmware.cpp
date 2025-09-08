@@ -70,7 +70,7 @@ static inline void set_microros_net_transports(IPAddress agent_ip, uint16_t agen
 #endif
 
 #ifndef BAUDRATE
-#define BAUDRATE 921600
+#define BAUDRATE 3000000
 #endif
 
 #ifndef NODE_NAME
