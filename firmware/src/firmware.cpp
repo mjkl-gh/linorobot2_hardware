@@ -305,6 +305,7 @@ void publishData()
 {
     static unsigned skip_dip = 0;
     odom_msg = odometry.getData();
+#ifdef USE_IMU
     imu_msg = imu.getData();
 #ifdef USE_FAKE_IMU
     imu_msg.angular_velocity.z = odom_msg.twist.twist.angular.z;
@@ -316,12 +317,14 @@ void publishData()
     mag_msg.magnetic_field.y -= mag_bias[1];
     mag_msg.magnetic_field.z -= mag_bias[2];
 #endif
+#endif
 
     struct timespec time_stamp = getTime();
 
     odom_msg.header.stamp.sec = time_stamp.tv_sec;
     odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
 
+#ifdef USE_IMU
     imu_msg.header.stamp.sec = time_stamp.tv_sec;
     imu_msg.header.stamp.nanosec = time_stamp.tv_nsec;
 
@@ -334,6 +337,8 @@ void publishData()
 #ifndef USE_FAKE_MAG
     RCSOFTCHECK(rcl_publish(&mag_publisher, &mag_msg, NULL));
 #endif
+#endif // USE_IMU
+
     RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
 #if defined(BATTERY_PIN) || defined(USE_INA219)
     battery_msg = getBattery();
@@ -386,6 +391,7 @@ bool createEntities()
         ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),
         TOPIC_PREFIX "odom/unfiltered"
     ));
+#ifdef USE_IMU
     // create IMU publisher
     RCCHECK(rclc_publisher_init_default(
         &imu_publisher,
@@ -406,6 +412,7 @@ bool createEntities()
         TOPIC_PREFIX "imu/mag"
     ));
 #endif
+#endif // USE_IMU
 #if defined(BATTERY_PIN) || defined(USE_INA219)
     // create battery pyblisher
     RCCHECK(rclc_publisher_init_default(
@@ -530,6 +537,7 @@ void setup()
     motor2_controller.begin();
     motor3_controller.begin();
     motor4_controller.begin();
+#ifdef USE_IMU
     bool imu_ok = imu.init();
     if (!imu_ok) // take IMU failure as fatal
     {
@@ -554,6 +562,7 @@ void setup()
             runOta();
         }
     }
+#endif
     initBattery();
     initRange();
     initLidar(); // after wifi connected
