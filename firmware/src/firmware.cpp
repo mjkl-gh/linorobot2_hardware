@@ -101,14 +101,18 @@ static inline void set_microros_net_transports(IPAddress agent_ip, uint16_t agen
   if (uxr_millis() - init > MS) { X; init = uxr_millis();} \
 } while (0)
 
+#ifdef ODOM_PUBLISHER
 rcl_publisher_t odom_publisher;
+#endif
 rcl_publisher_t imu_publisher;
 rcl_publisher_t mag_publisher;
 rcl_subscription_t twist_subscriber;
 rcl_publisher_t battery_publisher;
 rcl_publisher_t range_publisher;
 
+#ifdef ODOM_PUBLISHER
 nav_msgs__msg__Odometry odom_msg;
+#endif
 sensor_msgs__msg__Imu imu_msg;
 sensor_msgs__msg__MagneticField mag_msg;
 geometry_msgs__msg__Twist twist_msg;
@@ -304,7 +308,9 @@ void jointCallback(const void *msgin)
 void publishData()
 {
     static unsigned skip_dip = 0;
+#ifdef ODOM_PUBLISHER
     odom_msg = odometry.getData();
+#endif
 #ifdef USE_IMU
     imu_msg = imu.getData();
 #ifdef USE_FAKE_IMU
@@ -321,8 +327,10 @@ void publishData()
 
     struct timespec time_stamp = getTime();
 
+#ifdef ODOM_PUBLISHER
     odom_msg.header.stamp.sec = time_stamp.tv_sec;
     odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
+#endif
 
 #ifdef USE_IMU
     imu_msg.header.stamp.sec = time_stamp.tv_sec;
@@ -339,7 +347,9 @@ void publishData()
 #endif
 #endif // USE_IMU
 
+#ifdef ODOM_PUBLISHER
     RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
+#endif
 #if defined(BATTERY_PIN) || defined(USE_INA219)
     battery_msg = getBattery();
     battery_msg.header.stamp.sec = time_stamp.tv_sec;
@@ -384,6 +394,7 @@ bool createEntities()
     RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
     // create node
     RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
+#ifdef ODOM_PUBLISHER
     // create odometry publisher
     RCCHECK(rclc_publisher_init_default(
         &odom_publisher,
@@ -391,6 +402,7 @@ bool createEntities()
         ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),
         TOPIC_PREFIX "odom/unfiltered"
     ));
+#endif
 #ifdef USE_IMU
     // create IMU publisher
     RCCHECK(rclc_publisher_init_default(
@@ -487,7 +499,9 @@ bool destroyEntities()
     rmw_context_t * rmw_context = rcl_context_get_rmw_context(&support.context);
     (void) rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
 
+#ifdef ODOM_PUBLISHER
     RCSOFTCHECK(rcl_publisher_fini(&odom_publisher, &node));
+#endif
     RCSOFTCHECK(rcl_publisher_fini(&imu_publisher, &node));
 #ifndef USE_FAKE_MAG
     RCSOFTCHECK(rcl_publisher_fini(&mag_publisher, &node));
